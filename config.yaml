@@ -87,3 +87,14 @@ pipeline:
   log_level: "INFO"
   # Log file path (null = stdout only)
   log_file: "data/energy_monitor.log"
+
+  # ── Dataset collection ──────────────────────────────────────────────────────
+  # Set dataset_dir to a path to save a labelled copy of each captured image.
+  # Files are named: <reading>_<timestamp>.png  e.g. 35.768_2026-02-21T14-30-00.png
+  # Collect for 24 hours, then rename any mislabelled files and use
+  # --verify-dataset to check OCR accuracy against the ground-truth names.
+  # null = disabled (default)
+  dataset_dir: null
+  # Stop saving after this many images (0 = no limit).
+  # Set to 24 for a one-day verification run.
+  dataset_hours: 24

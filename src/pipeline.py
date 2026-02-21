@@ -15,10 +15,14 @@ Usage (calibrate: shows detected display crop and exits):
 
 Export readings to CSV:
     python src/pipeline.py --export readings.csv
+
+Verify OCR against a labelled dataset:
+    python src/pipeline.py --verify-dataset dataset/
 """
 
 import argparse
 import logging
+import shutil
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
@@ -145,7 +149,12 @@ def run(config: dict, test_image_path: str = None, debug: bool = False) -> dict:
         timestamp=timestamp,
     )
 
-    # ── 6. Cleanup ────────────────────────────────────────────────────────────
+    # ── 6. Dataset collection ─────────────────────────────────────────────────
+    dataset_dir = pipe_cfg.get("dataset_dir")
+    if dataset_dir and image_path:
+        _save_dataset_image(image_path, result.value, timestamp, dataset_dir, pipe_cfg)
+
+    # ── 7. Cleanup ────────────────────────────────────────────────────────────
     if delete_after:
         delete_image(image_path)
 
@@ -159,6 +168,110 @@ def run(config: dict, test_image_path: str = None, debug: bool = False) -> dict:
         "sane": sane,
         "row_id": row_id,
     }
+
+
+# ── Dataset helpers ───────────────────────────────────────────────────────────
+
+def _save_dataset_image(
+    image_path: str,
+    value: float,
+    timestamp: datetime,
+    dataset_dir: str,
+    pipe_cfg: dict,
+) -> None:
+    """
+    Copy the captured image into dataset_dir with the OCR reading in the filename.
+
+    Filename format: <value>_<timestamp>.png
+    Example:         35.768_2026-02-21T14-30-00.png
+
+    After collecting a full run you can rename any mislabelled files (where
+    the OCR was wrong) to the correct reading, then run --verify-dataset to
+    measure accuracy on the ground-truth names.
+    """
+    dest_dir = Path(dataset_dir)
+    max_images = int(pipe_cfg.get("dataset_hours", 24))
+
+    # Check limit
+    if max_images > 0:
+        existing = sorted(dest_dir.glob("*.png")) if dest_dir.exists() else []
+        if len(existing) >= max_images:
+            logger.info(
+                "Dataset limit reached (%d images). Not saving %s.",
+                max_images, image_path,
+            )
+            return
+
+    dest_dir.mkdir(parents=True, exist_ok=True)
+    ts_str = timestamp.strftime("%Y-%m-%dT%H-%M-%S")
+    dest = dest_dir / f"{value:.3f}_{ts_str}.png"
+    shutil.copy2(image_path, dest)
+    logger.info("Dataset image saved: %s", dest)
+
+
+def verify_dataset(dataset_dir: str, config: dict) -> None:
+    """
+    Run OCR on every image in dataset_dir and compare to the ground-truth
+    reading encoded in the filename.
+
+    Expected filename format: <reading>_<anything>.png
+    Example: 35.768_2026-02-21T14-30-00.png  →  ground truth = 35.768
+
+    Prints a per-image summary and an overall accuracy score.
+    """
+    from src.capture import _load_image
+    from src.preprocess import extract_display
+    from src.ocr import read_display, OCRError
+
+    images = sorted(Path(dataset_dir).glob("*.png"))
+    if not images:
+        print(f"No PNG images found in {dataset_dir}")
+        return
+
+    correct = 0
+    total = 0
+    errors = []
+
+    print(f"{'File':<45}  {'Ground truth':>13}  {'OCR':>13}  {'Conf':>6}  Match")
+    print("-" * 90)
+
+    for img_path in images:
+        # Parse ground truth from filename prefix
+        try:
+            gt_str = img_path.stem.split("_")[0]
+            gt = float(gt_str)
+        except (ValueError, IndexError):
+            logger.warning("Cannot parse ground truth from filename: %s", img_path.name)
+            continue
+
+        total += 1
+        try:
+            image = _load_image(str(img_path))
+            preprocessed = extract_display(image, config)
+            result = read_display(preprocessed, config)
+            match = abs(result.value - gt) < 0.0005   # within half a display unit
+            if match:
+                correct += 1
+            mark = "✓" if match else "✗"
+            print(
+                f"{img_path.name:<45}  {gt:>13.3f}  {result.value:>13.3f}"
+                f"  {result.confidence:>6.1f}  {mark}"
+            )
+            if not match:
+                errors.append((img_path.name, gt, result.value))
+        except OCRError as exc:
+            print(f"{img_path.name:<45}  {gt:>13.3f}  {'ERROR':>13}  {'':>6}  ✗")
+            errors.append((img_path.name, gt, f"OCR error: {exc}"))
+            continue
+
+    print("-" * 90)
+    pct = 100 * correct / total if total else 0
+    print(f"Accuracy: {correct}/{total} ({pct:.1f}%)")
+
+    if errors:
+        print("\nMismatches:")
+        for name, gt, got in errors:
+            print(f"  {name}: expected {gt}, got {got}")
 
 
 # ── CLI ───────────────────────────────────────────────────────────────────────
@@ -178,6 +291,9 @@ def _build_parser() -> argparse.ArgumentParser:
                    help="Export all readings to a CSV file and exit")
     p.add_argument("--list", action="store_true",
                    help="Print the last 20 readings and exit")
+    p.add_argument("--verify-dataset", default=None, metavar="DIR",
+                   help="Run OCR on every image in DIR and compare to ground-truth "
+                        "readings encoded in filenames (<reading>_<timestamp>.png)")
     return p
 
 
@@ -185,6 +301,11 @@ def main() -> None:
     args = _build_parser().parse_args()
     config = _load_config(args.config)
     _setup_logging(config)
+
+    # ── Verify-dataset mode ───────────────────────────────────────────────────
+    if args.verify_dataset:
+        verify_dataset(args.verify_dataset, config)
+        return
 
     # ── Export mode ───────────────────────────────────────────────────────────
     if args.export:
