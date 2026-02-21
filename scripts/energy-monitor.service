@@ -1,0 +1,28 @@
+[Unit]
+Description=Energy Meter OCR – single reading
+Documentation=https://github.com/your-repo/energy-monitor
+# Run after the filesystem is available
+After=local-fs.target
+
+[Service]
+Type=oneshot
+
+# Run as the 'pi' user; adjust if your username differs
+User=pi
+Group=pi
+
+# Working directory – must match where you cloned the repo
+WorkingDirectory=/home/pi/energy-monitor
+
+# Activate the virtualenv and run the pipeline
+ExecStart=/home/pi/energy-monitor/venv/bin/python -m src.pipeline
+
+# Capture stdout/stderr to the systemd journal
+StandardOutput=journal
+StandardError=journal
+
+# Allow up to 5 minutes for a reading (handles slow Pi cameras)
+TimeoutStartSec=300
+
+[Install]
+WantedBy=multi-user.target

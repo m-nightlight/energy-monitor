@@ -1,0 +1,89 @@
+camera:
+  # Resolution for Pi Camera Module 3 (adjust for your model)
+  resolution: [1920, 1080]
+  # Camera rotation in degrees (0, 90, 180, 270)
+  rotation: 0
+  # Exposure time in microseconds (null = auto)
+  exposure_time: null
+  # Analogue gain (null = auto, try 2.0-4.0 in low light)
+  analogue_gain: null
+
+display:
+  # Manual crop region [x, y, width, height] in pixels.
+  # Set to null for automatic perspective detection.
+  # Use: python -m src.pipeline --image energy_reading.png --calibrate
+  crop_region: null
+
+  # ROI fractions used by auto-detection to narrow the search area.
+  # These describe the sub-region of the full image where the meter face lives.
+  # (0.0 = left/top edge, 1.0 = right/bottom edge of the full image)
+  roi_y_start: 0.35
+  roi_y_end:   0.70
+  roi_x_start: 0.25
+  roi_x_end:   0.75
+
+  # Threshold below which a pixel is considered "dark LCD background"
+  # (used to find the display rectangle). 0–255.
+  display_dark_threshold: 80
+
+  # Aspect-ratio and area filters for the detected display rectangle.
+  min_aspect_ratio: 2.0
+  max_aspect_ratio: 10.0
+  min_area_fraction: 0.05   # min fraction of ROI area
+
+  # Fraction of the warped display image that contains the actual digits.
+  # Adjust these if your meter shows more/less label text around the digits.
+  # [y_start, y_end] as fractions of warped-display height
+  digit_crop_y: [0.18, 0.92]
+  # [x_start, x_end] as fractions of warped-display width
+  digit_crop_x: [0.14, 0.85]
+
+ocr:
+  # Decimal places in the meter reading (e.g. 35.768 → 3 decimal places)
+  decimal_places: 3
+
+  # Tesseract page segmentation mode.
+  # 13 = raw line (best for 7-segment, no layout analysis)
+  psm: 13
+
+  # Scale factor applied to the display crop before OCR.
+  # Larger = better accuracy, more CPU. 6–8 recommended.
+  scale_factor: 8.0
+
+  # CLAHE parameters (local contrast enhancement for low-contrast LCD)
+  clahe_clip: 4.0
+  clahe_grid: [6, 3]
+
+  # Binary threshold (0–255). Pixels darker than this become black (digit).
+  # Lower = captures faint segment bars (e.g. the top bar of "7").
+  threshold: 70
+
+  # Morphological close kernel [width, height] to bridge broken segments.
+  morph_close: [3, 2]
+
+  # Minimum Tesseract confidence (0–100). Readings below this are flagged.
+  min_confidence: 50
+
+  # Maximum allowed reading jump since the last stored reading.
+  # Set to null to disable. (Unit = same as database.unit)
+  max_jump: 10.0
+
+database:
+  # Path to SQLite database file
+  path: "data/readings.db"
+  # Unit label stored alongside each reading
+  unit: "MWh"
+
+pipeline:
+  # Directory for temporary captured images
+  image_dir: "/tmp/energy_monitor"
+  # Delete images after successful processing
+  delete_images: true
+  # Save debug images showing preprocessing steps
+  save_debug_images: false
+  # Directory for debug images
+  debug_dir: "debug"
+  # Log level: DEBUG, INFO, WARNING, ERROR
+  log_level: "INFO"
+  # Log file path (null = stdout only)
+  log_file: "data/energy_monitor.log"

@@ -1,0 +1,18 @@
+# Core dependencies for the energy monitor pipeline
+# Install with: pip install -r requirements.txt
+#
+# Note: picamera2 is NOT listed here because it must be installed via the
+# system package manager on Raspberry Pi OS:
+#   sudo apt install python3-picamera2
+# (the --system-site-packages venv flag in install.sh makes it visible)
+
+# Image processing
+opencv-python-headless>=4.8.0   # Headless = no GUI deps, lighter on Pi
+numpy>=1.24.0
+Pillow>=10.0.0
+
+# OCR
+pytesseract>=0.3.10             # Python wrapper – needs tesseract-ocr binary
+
+# Config
+PyYAML>=6.0

@@ -1,0 +1,16 @@
+[Unit]
+Description=Energy Meter OCR – run every hour
+Requires=energy-monitor.service
+
+[Timer]
+# Fire at the top of every hour (00:00, 01:00, 02:00 …)
+OnCalendar=hourly
+
+# If the Pi was off at the scheduled time, run as soon as it boots
+Persistent=true
+
+# Add a small random delay (0–60 s) to avoid hitting the network at exactly :00
+RandomizedDelaySec=60
+
+[Install]
+WantedBy=timers.target

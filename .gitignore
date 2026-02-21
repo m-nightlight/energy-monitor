@@ -1,0 +1,39 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+venv/
+env/
+.venv/
+*.egg-info/
+dist/
+build/
+
+# Virtual environment
+venv/
+.venv/
+
+# Database and runtime data
+data/
+
+# Temporary images
+/tmp/
+*.jpg
+*.jpeg
+*.png
+# Keep the sample image used for testing
+!energy_reading.png
+
+# Debug images
+debug/
+
+# Logs
+*.log
+
+# Editor
+.DS_Store
+.idea/
+.vscode/
+*.swp
