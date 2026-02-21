@@ -73,6 +73,24 @@ def extract_display(image: np.ndarray, config: dict, debug_dir: Optional[str] = 
 
 # ── Perspective detection ────────────────────────────────────────────────────
 
+def _detect_display(
+    image: np.ndarray, cfg: dict, debug_dir: Optional[str] = None
+) -> tuple:
+    """
+    Locate the LCD display and return ``(warped_crop, (x, y, w, h))`` in
+    full-image coordinates, or ``(None, None)`` if detection fails.
+
+    Intended for the ``--calibrate`` workflow so callers can report the
+    bounding box to the user and draw an annotation on the original image.
+    """
+    result = _find_and_warp(image, cfg, debug_dir)
+    if result is None:
+        return None, None
+    warped, best_box = result
+    x, y, w, h = cv2.boundingRect(best_box)
+    return warped, (x, y, w, h)
+
+
 def _detect_and_warp(image: np.ndarray, cfg: dict, debug_dir: Optional[str]) -> Optional[np.ndarray]:
     """
     Locate the LCD display rectangle (which may be tilted relative to the
@@ -86,6 +104,18 @@ def _detect_and_warp(image: np.ndarray, cfg: dict, debug_dir: Optional[str]) -> 
       • getPerspectiveTransform → warpPerspective.
 
     Returns the warped (level, rectangular) display image, or None.
+    """
+    result = _find_and_warp(image, cfg, debug_dir)
+    return result[0] if result is not None else None
+
+
+def _find_and_warp(
+    image: np.ndarray, cfg: dict, debug_dir: Optional[str]
+) -> Optional[tuple]:
+    """
+    Core detection routine.  Returns ``(warped, best_box)`` where
+    ``best_box`` is a (4, 2) int array of corner points in full-image
+    coordinates, or ``None`` if no display was found.
     """
     h_img, w_img = image.shape[:2]
 
@@ -165,7 +195,7 @@ def _detect_and_warp(image: np.ndarray, cfg: dict, debug_dir: Optional[str]) -> 
         cv2.drawContours(annotated, [best_box], 0, (0, 255, 0), 3)
         _save_debug(annotated, debug_dir, "01_detected_box.png")
 
-    return cv2.warpPerspective(image, M, (W, H))
+    return cv2.warpPerspective(image, M, (W, H)), best_box
 
 
 def _sort_corners(box: np.ndarray) -> tuple:
