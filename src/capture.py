@@ -65,13 +65,18 @@ def _capture_picamera2(config: dict) -> tuple:
     if controls:
         cam.set_controls(controls)
 
-    # Optionally rotate the sensor output
-    rotation = camera_cfg.get("rotation", 0)
-    if rotation:
-        cam.set_controls({"Rotation": rotation})
-
     cam.start()
     time.sleep(2)  # Allow auto-exposure to settle
+
+    # Trigger autofocus (Camera Module 3). Falls back gracefully on fixed-focus
+    # cameras (Module 1/2) which don't support AfMode.
+    if camera_cfg.get("autofocus", True):
+        try:
+            success = cam.autofocus_cycle()
+            if not success:
+                logger.warning("Autofocus did not converge; capturing anyway.")
+        except Exception as exc:
+            logger.debug("Autofocus not supported on this camera: %s", exc)
 
     cam.capture_file(str(image_path))
     cam.stop()
@@ -81,6 +86,15 @@ def _capture_picamera2(config: dict) -> tuple:
     image = cv2.imread(str(image_path))
     if image is None:
         raise RuntimeError(f"Failed to read captured image: {image_path}")
+
+    # Rotate via OpenCV (picamera2 doesn't expose a Rotation control)
+    rotation = camera_cfg.get("rotation", 0)
+    if rotation == 90:
+        image = cv2.rotate(image, cv2.ROTATE_90_CLOCKWISE)
+    elif rotation == 180:
+        image = cv2.rotate(image, cv2.ROTATE_180)
+    elif rotation == 270:
+        image = cv2.rotate(image, cv2.ROTATE_90_COUNTERCLOCKWISE)
 
     return image, str(image_path)
 

@@ -2,7 +2,9 @@ camera:
   # Resolution for Pi Camera Module 3 (adjust for your model)
   resolution: [1920, 1080]
   # Camera rotation in degrees (0, 90, 180, 270)
-  rotation: 0
+  rotation: 180
+  # Trigger autofocus before capture (Camera Module 3). Set false for fixed-focus cameras.
+  autofocus: true
   # Exposure time in microseconds (null = auto)
   exposure_time: null
   # Analogue gain (null = auto, try 2.0-4.0 in low light)
