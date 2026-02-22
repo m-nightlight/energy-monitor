@@ -42,27 +42,27 @@ ocr:
   # Decimal places in the meter reading (e.g. 35.768 → 3 decimal places)
   decimal_places: 3
 
-  # Tesseract page segmentation mode.
-  # 13 = raw line (best for 7-segment, no layout analysis)
-  psm: 13
+  # Total number of digits on the 7-segment display (excluding decimal point).
+  total_digits: 7
 
-  # Scale factor applied to the display crop before OCR.
-  # Larger = better accuracy, more CPU. 6–8 recommended.
-  scale_factor: 8.0
+  # Scale factor applied to the display crop before ssocr.
+  # Larger images give better digit separation. 3–6 recommended.
+  scale_factor: 4
 
-  # CLAHE parameters (local contrast enhancement for low-contrast LCD)
-  clahe_clip: 4.0
-  clahe_grid: [6, 3]
+  # CLAHE + binary threshold applied before digit detection (0–255).
+  # Pixels below this value become black (digit segments).
+  binarize_threshold: 80
 
-  # Binary threshold (0–255). Pixels darker than this become black (digit).
-  # Lower = captures faint segment bars (e.g. the top bar of "7").
-  threshold: 70
+  # ssocr segment detection threshold (0–100, default 50).
+  ssocr_threshold: 50
 
-  # Morphological close kernel [width, height] to bridge broken segments.
-  morph_close: [3, 2]
+  # Fraction of the binary image height to skip at the top (removes label text
+  # that sits above the digit row inside the cropped display area).
+  ssocr_y_start: 0.25
 
-  # Minimum Tesseract confidence (0–100). Readings below this are flagged.
-  min_confidence: 50
+  # Fraction of the binary image width to keep (crops the right-side unit
+  # label, e.g. "MWh", from the digit area).
+  ssocr_x_end: 0.82
 
   # Maximum allowed reading jump since the last stored reading.
   # Set to null to disable. (Unit = same as database.unit)

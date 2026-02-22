@@ -5,7 +5,7 @@
 #   sudo bash scripts/install.sh
 #
 # What this does:
-#   1. Installs system dependencies (tesseract, libcamera, python3-venv)
+#   1. Installs system dependencies (ssocr, libcamera, python3-venv)
 #   2. Creates a Python virtualenv and installs packages
 #   3. Installs and enables the systemd service + timer
 
@@ -30,7 +30,7 @@ apt-get install -y \
     python3-pip \
     python3-libcamera \
     libcamera-tools \
-    tesseract-ocr \
+    ssocr \
     libgl1 \
     libglib2.0-0 \
     libsm6 \

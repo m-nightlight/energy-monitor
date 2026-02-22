@@ -12,7 +12,8 @@ numpy>=1.24.0
 Pillow>=10.0.0
 
 # OCR
-pytesseract>=0.3.10             # Python wrapper – needs tesseract-ocr binary
+# ssocr is a system binary for 7-segment LCD displays. Install on Raspberry Pi OS:
+#   sudo apt install ssocr
 
 # Config
 PyYAML>=6.0
